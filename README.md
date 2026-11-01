@@ -8,12 +8,17 @@ The original game probes VGA hardware directly, which faults on Windows XP.
 Under Wine, its mixed DirectDraw/GDI drawing and overlapping popup windows also
 cause broken graphics, fullscreen and mouse input. Both fixes change installation
 lookup from the original machine-wide registry key (HKLM) to the current user's
-key (HKCU), allowing setup without administrator rights.
+key (HKCU), allowing setup without administrator rights. The patched EXEs also
+correct movie-codec headers and shutdown order to fix missing startup movies
+and crashes when quitting or closing the window.
+Wine 9.0 tolerates the original movie-header sizes; native XP/Windows 11
+Cinepak rejects them. Win95 playback is known, but its exact codec behavior
+has not been traced. The EXE repair makes both sizes explicit.
 
 | Folder | Solution |
 | --- | --- |
-| [xp/](xp/README.md) | Minimal four-byte EXE patch; uses Windows' system DirectDraw. Also tested on Windows 11. |
-| [wine/](wine/README.md) | Six-byte EXE patch, Generations shim and cnc-ddraw; supports resized windows, borderless fullscreen and optional shader filtering on Wine and Windows. |
+| [xp/](xp/README.md) | Native EXE patch; uses Windows' system DirectDraw. Also tested on Windows 11. |
+| [wine/](wine/README.md) | EXE patch, Generations shim and cnc-ddraw; supports resized windows, borderless fullscreen and optional shader filtering on Wine and Windows. |
 
 Each folder contains its instructions, patcher, registry sample and source.
 Patch a supported original `sgens.exe`; the patchers verify its SHA-256 and

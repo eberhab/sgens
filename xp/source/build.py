@@ -29,6 +29,18 @@ imports = {
 }
 with tempfile.TemporaryDirectory(prefix="sgens-xp-build-") as temporary:
     root = Path(temporary)
+    # XP ignores the Vista UAC extension only when it is in asm.v3.
+    # LLD's default trustInfo uses asm.v1, which XP rejects before main.
+    manifest = root / "patch.manifest"
+    manifest.write_text('''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+    <security><requestedPrivileges>
+      <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
+    </requestedPrivileges></security>
+  </trustInfo>
+</assembly>
+''', encoding="utf-8")
     libraries = []
     for dll, functions in imports.items():
         members = []
@@ -50,6 +62,6 @@ with tempfile.TemporaryDirectory(prefix="sgens-xp-build-") as temporary:
         "/entry:entry@0", "/subsystem:console,5.01", "/osversion:5.1", "/nodefaultlib",
         # Suppress Windows installer detection for the name patch-xp.exe.
         # XP ignores requestedExecutionLevel; newer Windows runs without elevation.
-        "/manifest:embed", "/manifestuac:level='asInvoker' uiAccess='false'",
+        "/manifest:embed", "/manifestuac:no", "/manifestinput:" + str(manifest),
         "/dynamicbase", "/nxcompat", "/out:" + str(output), str(obj), *libraries], check=True)
 print(output)

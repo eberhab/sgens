@@ -1,6 +1,6 @@
 # Wine and enhanced Windows graphics
 
-The six-byte game patch, **Generations shim v12** and **cnc-ddraw 7.1 x86**
+The game patch, **Generations shim v12** and **cnc-ddraw 7.1 x86**
 repair presentation, scaled mouse input and Alt+Enter fullscreen. All runtime
 components are included; no download, DXVK or Winetricks is required.
 
@@ -88,7 +88,7 @@ Run as the playing user; HKCU needs no administrator rights. Windows does not
 use the REG file's Wine settings. `CDPath` points to the resource directory;
 complete local DATA works without a mounted CD in the checked scenes, but media
 checks are unchanged. For [native Windows graphics](../xp/README.md), use the
-four-byte patch and move the local wrapper DLLs out of the game folder.
+native patch and move the local wrapper DLLs out of the game folder.
 
 ## Settings and fixes
 
@@ -106,8 +106,30 @@ The EXE patch bypasses the VGA probe (three bytes), selects HKCU instead of HKLM
 (one byte), and fixes two window styles: **82 -> 46** makes internal screens
 clipped children required for drawing, focus and input; **93 -> 83** removes
 initial `WS_VISIBLE` until the shim sizes and shows the main window. The latter
-controls startup visibility; later gameplay does not depend on it. Exact offsets,
-hashes and explanations are in `patch-sgens.sh`. Original EXEs still read HKLM.
+controls startup visibility; later gameplay does not depend on it. Exact offsets
+and hashes are in `patch-sgens.sh`; the annotated `../xp/source/patch-xp.c`
+explains the movie/exit adapters shared by both modes. Original EXEs still read HKLM.
+
+Both patched variants also correct the input/output image sizes supplied to the
+Windows movie codec and repair shutdown order. Movie workers stop before their
+surfaces are freed; active scene objects are destroyed while their graphics
+services still exist. Closing the main window requests orderly application exit
+instead of destroying that window before cleanup. These repairs live in an EXE
+`.sgfix` code section (199 code bytes, 512 bytes added to each file); the original
+EXE, game data and save format are preserved. No codec installation is required.
+
+The missing Windows movies are a codec-header compatibility issue: the game
+passes a static compressed-size value and a zero RGB565 output size. XP/Windows
+11's native Cinepak path rejects decoding until those sizes are corrected;
+Wine 9.0's builtin decoder tolerates them. The exact reason the original Win95
+codec worked remains unverified. Both native and shim EXEs contain the repair;
+no replacement codec or additional Wine setting is needed.
+
+Shutdown is a game-side ordering repair validated with native and shim setups.
+Its placement does not prove that the shim was uninvolved in triggering the
+original close failure: native XP menu Quit passed before the repair, while
+shim title-bar close failed. The patch shares explicit worker/scene cleanup
+with native play; a demonstrated shim defect still belongs in the shim.
 
 The shim uses public DirectDraw/Win32 interfaces. `ddraw_shim.c` handles GDI
 presentation/input, `presentation_filter.h` owns optional final-image filtering,
