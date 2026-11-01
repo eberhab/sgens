@@ -1,0 +1,6 @@
+# Personal game installs, prefixes and reproducible developer output.
+/runtime/
+/game/
+*.obj
+*.lib
+__pycache__/

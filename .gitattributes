@@ -1,0 +1,2 @@
+# Preserve packaged bytes and REG line endings on every platform.
+* -text

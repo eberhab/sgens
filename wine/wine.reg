@@ -1,0 +1,20 @@
+REGEDIT4
+
+; Edit both literal paths before importing as the user who will play.
+; Wine: map G: to the parent of the en/de game folders.
+; Windows: replace G:\\en with your game directory, e.g. C:\\Games\\Generations.
+; Patched EXEs read HKCU; the untouched original game reads HKLM instead.
+; DE/EN and native/shim modes share these values. Reimport to select a folder.
+[HKEY_CURRENT_USER\SOFTWARE\MicroProse\Star Trek Generations\1.0]
+"Path"="G:\\en"
+"CDPath"="G:\\en\\DATA"
+
+; Wine-only settings below are unused by Windows.
+; Use a game-exclusive prefix shared by DE/EN. The override is prefix-wide.
+[HKEY_CURRENT_USER\Software\Wine\DllOverrides]
+"ddraw"="native,builtin"
+
+; Prevent Wine X11 host monitor mode changes, independently of the shim guard.
+[HKEY_CURRENT_USER\Software\Wine\X11 Driver]
+"UseXRandR"="N"
+"UseXVidMode"="N"

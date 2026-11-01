@@ -1,0 +1,8 @@
+REGEDIT4
+
+; Edit both literal paths before importing as the user who will play.
+; Patched EXEs read HKCU; the untouched original game reads HKLM instead.
+; DE/EN and native/shim modes share these values. Reimport to select a folder.
+[HKEY_CURRENT_USER\SOFTWARE\MicroProse\Star Trek Generations\1.0]
+"Path"="C:\\Games\\Generations"
+"CDPath"="C:\\Games\\Generations\\DATA"

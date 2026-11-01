@@ -1,0 +1,11 @@
+LIBRARY ddraw.dll
+EXPORTS
+    DirectDrawCreate = _DirectDrawCreate@12
+    DirectDrawCreateEx = _DirectDrawCreateEx@16
+    DirectDrawCreateClipper = _DirectDrawCreateClipper@12
+    DirectDrawEnumerateA = _DirectDrawEnumerateA@8
+    DirectDrawEnumerateW = _DirectDrawEnumerateW@8
+    DirectDrawEnumerateExA = _DirectDrawEnumerateExA@12
+    DirectDrawEnumerateExW = _DirectDrawEnumerateExW@12
+    AcquireDDThreadLock = _AcquireDDThreadLock@0
+    ReleaseDDThreadLock = _ReleaseDDThreadLock@0
