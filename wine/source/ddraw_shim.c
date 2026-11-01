@@ -707,11 +707,16 @@ DLLIMPORT BOOL WINAPI GdiFlush(void);
 typedef struct { unsigned style; void *proc; int cls_extra,win_extra; HMODULE instance; HANDLE icon,cursor,background; LPCSTR menu,name; } WINDOWCLASS;
 
 
+#include "presentation_filter.h"
 static int g_frame_ready;
 static int paint_frame(HWND hwnd,void *dc)
 {
     RECT r={0};GetClientRect(hwnd,&r);
     if(!g_frame_ready || !dc || r.right<=0 || r.bottom<=0)return 0;
+    if(g_filter_failed && g_filter_reset)return 0;
+    int filtered=filter_present(hwnd,g_pixels,g_primary_bmi.w,-g_primary_bmi.h,r.right,r.bottom);
+    if(filtered>0)return -g_primary_bmi.h;
+    if(filtered<0){PostMessageA(hwnd,FILTER_RESET_MESSAGE,0,0);return 0;}
     int lines=StretchDIBits(dc,0,0,r.right,r.bottom,0,0,g_primary_bmi.w,-g_primary_bmi.h,
                           g_pixels,&g_primary_bmi,0,SRCCOPY);
     GdiFlush();
@@ -719,6 +724,8 @@ static int paint_frame(HWND hwnd,void *dc)
 }
 static long WINAPI presenter_proc(HWND hwnd,unsigned msg,DWORD wp,long lp)
 {
+    if(msg==FILTER_RESET_MESSAGE){DestroyWindow(hwnd);return 0;}
+    if(msg==0x82){filter_destroy(hwnd);if(hwnd==g_present_hwnd)g_present_hwnd=0;}
     if(msg==15) { /* WM_PAINT: also repaint after expose/compositor damage. */
         PAINTSTRUCT ps={0};void *dc=BeginPaint(hwnd,&ps);
         paint_frame(hwnd,dc);EndPaint(hwnd,&ps);return 0;
@@ -789,6 +796,7 @@ static BOOL sync_presenter(void)
         HMODULE instance=GetModuleHandleA("ddraw.dll");
         if(!atom) {
             WINDOWCLASS wc={0};wc.proc=(void*)presenter_proc;wc.instance=instance;
+            if(filter_choice())wc.style=0x20; /* CS_OWNDC for the optional GL context. */
             wc.name="SGENS_FRAME_PRESENTER";atom=RegisterClassA(&wc);
         }
         if(!atom)return 0;
@@ -1069,7 +1077,7 @@ static HMODULE backend(void)
             append_log("Display guard requested: matched static calls restricted; dynamic/dependency calls not covered");
         }
         if(g_backend_failed){g_backend=0;return 0;}
-        append_log("Backend loaded: ddraw-backend.dll; owned COM boundary v11; logical 60 Hz timing; process-lifetime callbacks, deferred presentation and logical UI repaint");
+        append_log("Backend loaded: ddraw-backend.dll; shim v12; logical 60 Hz timing; deferred presentation, logical UI repaint and optional final-image filtering");
     }
     return g_backend;
 }

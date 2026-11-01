@@ -1,6 +1,6 @@
 # Wine and enhanced Windows graphics
 
-The six-byte game patch, **Generations shim v11** and **cnc-ddraw 7.1 x86**
+The six-byte game patch, **Generations shim v12** and **cnc-ddraw 7.1 x86**
 repair presentation, scaled mouse input and Alt+Enter fullscreen. All runtime
 components are included; no download, DXVK or Winetricks is required.
 
@@ -98,8 +98,8 @@ Alt+Enter toggles it. The 640×480 image is stretched, so use 4:3 window dimensi
 Keep `block_display_changes=1` for the shim's monitor guard; Wine's registry
 safeguards are independent. The backend profile uses `renderer=gdi`, `hook=0`,
 `fixchilds=0`, nonexclusive windowed mode and disabled backend fullscreen hotkeys
-so the shim owns the visible window and input. Backend shaders do not filter its
-final GDI image. `SGENS.CFG` stores binary game preferences; edit them in Settings
+so the shim owns the visible window and input. Backend shaders cannot filter the
+shim's final image; use the optional shim filter below. `SGENS.CFG` stores binary game preferences; edit them in Settings
 and keep that file and saves separate for DE/EN.
 
 The EXE patch bypasses the VGA probe (three bytes), selects HKCU instead of HKLM
@@ -110,12 +110,50 @@ controls startup visibility; later gameplay does not depend on it. Exact offsets
 hashes and explanations are in `patch-sgens.sh`. Original EXEs still read HKLM.
 
 The shim uses public DirectDraw/Win32 interfaces. `ddraw_shim.c` handles GDI
-presentation/input, `com_proxy.h` forwards COM calls, `logical_display.h` handles
+presentation/input, `presentation_filter.h` owns optional final-image filtering,
+`com_proxy.h` forwards COM calls, `logical_display.h` handles
 timing, and `import_guard.h` adapts resolved display API imports. Alternative
 backends need their own configuration and compatibility checks. Focused checks
 cover Wine 9.0, XP SP3 and Windows 11; complete campaigns and every driver are
 not qualified. The game folder's `sgens-ddraw-shim.log` provides diagnostics;
 `SGENS_DDRAW_CAPTURE=1` enables frame captures.
+
+## Optional shader filtering
+
+The shim can filter its completed image, including GDI menus and the lower
+panel, independently of the DirectDraw backend. In `[sgens-shim]` in the game's
+`ddraw.ini`, choose:
+
+```ini
+width=1280
+height=960
+filter=bicubic
+```
+
+Restart the game after editing. `none` (default) keeps the existing GDI
+presentation; `bilinear` softly blends pixels; `bicubic` uses a sharper
+Catmull-Rom interpolation shader. Smoothing can soften small text, so choose by
+preference. The game still renders at 640×480: this changes scaling, not scene
+detail. Use a larger window or Alt+Enter to see the effect.
+
+Keep both existing DLLs and the backend's `renderer=gdi` profile in place.
+Filtering uses the shim's own OpenGL 2.0/GLSL 1.20 context; it needs no shader
+files, downloads, DXVK, new game patch or cnc-ddraw development build. It reads
+this option from the INI beside the shim, even while the game changes working
+directory. Select `filter=none` and restart to turn it off.
+
+`source/presentation_filter.h` uploads the already composed, top-down BGRA frame
+and applies a built-in shader only to the existing presentation child. It
+restores the thread's previous OpenGL context after each frame and frees its
+resources when that child is destroyed. Shader/driver failures log a fallback
+to GDI; if a pixel format was assigned, the shim recreates the child first,
+because Windows does not allow changing a window's pixel format. No backend
+COM calls, hooks or display-mode settings are changed by filtering.
+
+The optional filter is runtime-checked under Wine 9.0 with software OpenGL;
+XP/Windows 11 shader operation is not yet verified. Check `sgens-ddraw-shim.log`
+in the game folder or `WORLD/` for `Presentation filter active` or a fallback
+message. These are startup settings, not live shader-switching controls.
 
 ## Build and backend download
 

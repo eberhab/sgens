@@ -13,7 +13,7 @@ key (HKCU), allowing setup without administrator rights.
 | Folder | Solution |
 | --- | --- |
 | [xp/](xp/README.md) | Minimal four-byte EXE patch; uses Windows' system DirectDraw. Also tested on Windows 11. |
-| [wine/](wine/README.md) | Six-byte EXE patch, Generations shim and cnc-ddraw; supports resized windows and borderless fullscreen on Wine and Windows. |
+| [wine/](wine/README.md) | Six-byte EXE patch, Generations shim and cnc-ddraw; supports resized windows, borderless fullscreen and optional shader filtering on Wine and Windows. |
 
 Each folder contains its instructions, patcher, registry sample and source.
 Patch a supported original `sgens.exe`; the patchers verify its SHA-256 and
