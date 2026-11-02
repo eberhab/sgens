@@ -152,6 +152,20 @@ static int check_shim(const wchar *path) {
  * the 9-byte prologue and continue unchanged. Default WM_CLOSE destroys the
  * HWND too early. PostQuitMessage uses a PC-relative lookup of the existing IAT.
  *
+ * Resource string pool (cdecl append(pool*, string)): replace its first
+ * 103 bytes in place at DE:0C0730 / EN:0CFF30. The original copies first,
+ * then rotates blocks at 85% capacity; longer paths exhaust its spare bytes
+ * and overwrite the following allocation header, causing a later free crash.
+ * The replacement counts strlen+1 before copying. If this exceeds end-current,
+ * allocate max(406, strlen+1) with the original allocator and link it through
+ * the original owning block list. Copy once, update current, return the stable
+ * string address. Initial end is the original conservative threshold; new end
+ * is the actual exclusive block end. EBX/ESI/EDI/EBP and cdecl cleanup survive.
+ * Existing destruction frees every block. No new imports, relocations, section
+ * bytes, truncated strings, larger guessed constant, or swallowed exceptions.
+ * Allocation failure returns NULL before changing pool state; callers retain
+ * the original game's limited out-of-memory handling. See pool-fix.s.
+ *
  * Constants below are FILE offsets. Original .text VA = file offset+400C00h.
  * Both known originals have 512-byte file and 4096-byte section alignment,
  * an unused section-header slot at 268h, and no overlay. Full input SHA-256
@@ -159,6 +173,9 @@ static int check_shim(const wchar *path) {
  */
 typedef struct { u32 offset, length; const char *bytes; } GameFix;
 static const GameFix fixes_de[] = {
+    /* Grow resource string storage before copying: prevent long-path heap corruption. */
+    {0xC0730,103,
+     "\x53\x56\x57\x55\x8b\x5c\x24\x14\x8b\x74\x24\x18\x89\xf7\x31\xc0\xb9\xff\xff\xff\xff\xf2\xae\xf7\xd1\x89\xcd\x8b\x43\x0c\x8b\x53\x10\x29\xc2\x39\xd5\x76\x2f\xbf\x96\x01\x00\x00\x39\xef\x73\x02\x89\xef\x57\xe8\xb8\xda\x02\x00\x83\xc4\x04\x85\xc0\x74\x23\x89\x43\x0c\x01\xc7\x89\x7b\x10\x50\xff\x73\x14\xe8\x80\xb3\xff\xff\x83\xc4\x08\x89\x43\x14\x8b\x7b\x0c\x89\xf8\x89\xe9\xf3\xa4\x89\x7b\x0c\x5d\x5f\x5e\x5b\xc3"},
     /* Seven PE sections. */
     {0x86,2,
      "\x07\x00"},
@@ -197,6 +214,9 @@ static const GameFix fixes_de[] = {
      "\xe9\x7f\xd6\x17\x00"},
 };
 static const GameFix fixes_en[] = {
+    /* Grow resource string storage before copying: prevent long-path heap corruption. */
+    {0xCFF30,103,
+     "\x53\x56\x57\x55\x8b\x5c\x24\x14\x8b\x74\x24\x18\x89\xf7\x31\xc0\xb9\xff\xff\xff\xff\xf2\xae\xf7\xd1\x89\xcd\x8b\x43\x0c\x8b\x53\x10\x29\xc2\x39\xd5\x76\x2f\xbf\x96\x01\x00\x00\x39\xef\x73\x02\x89\xef\x57\xe8\xd8\xe1\xfb\xff\x83\xc4\x04\x85\xc0\x74\x23\x89\x43\x0c\x01\xc7\x89\x7b\x10\x50\xff\x73\x14\xe8\x30\xb3\xff\xff\x83\xc4\x08\x89\x43\x14\x8b\x7b\x0c\x89\xf8\x89\xe9\xf3\xa4\x89\x7b\x0c\x5d\x5f\x5e\x5b\xc3"},
     /* Seven PE sections. */
     {0x86,2,
      "\x07\x00"},
@@ -251,12 +271,12 @@ typedef struct {
 static const Edition editions[] = {
     {1471488,0xCDBB0,0x4ACAE,0x50C66,0x87ADF,"German",
      "3e4329143247177c4415c06137bd5751e6b9de506405dfab4c15e3245a0e536a",
-     "7ff63f1e09d1eb31855544e61f85f2671f6f505d797ecccef6c6ddd2769cd495",
-     "59497b6a94b02bb690a5fe0fe0552c41a4306a7bfcd53d8b18992c636ef5e5ff"},
+     "84897e4d47848c40e2498fd2937087f943b181639098203a542d32dc98ee785a",
+     "e3091cf04191f7301feff198a4572ec95aa7513c471b44b8d07c71e08fe92e7c"},
     {1571328,0xDE940,0x5F19E,0x8B0FB,0x867CF,"English",
      "e102fcb25ade3255cb0262578431c942c0f59de8cb8b8c16a8a8ceddb4618504",
-     "b2fd021e94e2d483c0507ca522bb2391f613b69f2a5c1e431453f943384212af",
-     "c6e9a6b3adcb61ccf62ea32d7f4ecdf1a6ea4e131fe78126cb19b30b7320919a"}
+     "9cbdfa863fd1a0991eb3b174c9b298c9481a1aa7fd1c55450612241743c1b412",
+     "359a8dc85beeaeedcea387a03f43f1afc664ee626531e0a4e867306367689e04"}
 };
 static int patch(const wchar *input, const wchar *output, int shim) {
     HANDLE in, out;

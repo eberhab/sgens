@@ -118,6 +118,14 @@ instead of destroying that window before cleanup. These repairs live in an EXE
 `.sgfix` code section (199 code bytes, 512 bytes added to each file); the original
 EXE, game data and save format are preserved. No codec installation is required.
 
+Both modes also repair the resource string pool: the original copies a path
+before checking available space, so long installation/DATA paths can overwrite
+heap metadata and crash later on menu Quit. The replacement checks the full
+string length including its NUL before copying, allocates a sufficiently large
+block when needed, and retains the original ownership/freeing rules. This is a
+103-byte in-place EXE repair, separate from `.sgfix`; the shim DLL is unchanged.
+It does not remove other original path-length limits or add Unicode-path support.
+
 The missing Windows movies are a codec-header compatibility issue: the game
 passes a static compressed-size value and a zero RGB565 output size. XP/Windows
 11's native Cinepak path rejects decoding until those sizes are corrected;

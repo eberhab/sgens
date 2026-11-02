@@ -10,7 +10,9 @@ cause broken graphics, fullscreen and mouse input. Both fixes change installatio
 lookup from the original machine-wide registry key (HKLM) to the current user's
 key (HKCU), allowing setup without administrator rights. The patched EXEs also
 correct movie-codec headers and shutdown order to fix missing startup movies
-and crashes when quitting or closing the window.
+and crashes when quitting or closing the window. Both variants also prevent
+long resource paths from overflowing the game's string pool and corrupting
+heap metadata before shutdown.
 Wine 9.0 tolerates the original movie-header sizes; native XP/Windows 11
 Cinepak rejects them. Win95 playback is known, but its exact codec behavior
 has not been traced. The EXE repair makes both sizes explicit.

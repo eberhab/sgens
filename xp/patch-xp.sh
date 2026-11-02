@@ -16,9 +16,9 @@ hash=$(sha256sum < "$1"); hash=${hash%% *}
 state=original
 case $hash in
     3e4329143247177c4415c06137bd5751e6b9de506405dfab4c15e3245a0e536a) lang=de ;;
-    7ff63f1e09d1eb31855544e61f85f2671f6f505d797ecccef6c6ddd2769cd495) lang=de; state=patched ;;
+    84897e4d47848c40e2498fd2937087f943b181639098203a542d32dc98ee785a) lang=de; state=patched ;;
     e102fcb25ade3255cb0262578431c942c0f59de8cb8b8c16a8a8ceddb4618504) lang=en ;;
-    b2fd021e94e2d483c0507ca522bb2391f613b69f2a5c1e431453f943384212af) lang=en; state=patched ;;
+    9cbdfa863fd1a0991eb3b174c9b298c9481a1aa7fd1c55450612241743c1b412) lang=en; state=patched ;;
     *) fail "Unknown executable SHA-256: $hash" ;;
 esac
 if $identify; then printf '%s %s\n' "$lang" "$state"; exit 0; fi
@@ -37,6 +37,13 @@ if [[ $state == original ]]; then
     write "$probe" '\x31\xc0\xc3'
     # Original HKLM PUSH 80000002 -> HKCU PUSH 80000001 for Path/CDPath.
     write "$registry" '\x01'
+    # Resource string pool: grow BEFORE copying (including the NUL).
+    # Original post-copy growth corrupts heap headers with long DATA paths.
+    if [[ $lang == de ]]; then
+        write 0xC0730 '\x53\x56\x57\x55\x8b\x5c\x24\x14\x8b\x74\x24\x18\x89\xf7\x31\xc0\xb9\xff\xff\xff\xff\xf2\xae\xf7\xd1\x89\xcd\x8b\x43\x0c\x8b\x53\x10\x29\xc2\x39\xd5\x76\x2f\xbf\x96\x01\x00\x00\x39\xef\x73\x02\x89\xef\x57\xe8\xb8\xda\x02\x00\x83\xc4\x04\x85\xc0\x74\x23\x89\x43\x0c\x01\xc7\x89\x7b\x10\x50\xff\x73\x14\xe8\x80\xb3\xff\xff\x83\xc4\x08\x89\x43\x14\x8b\x7b\x0c\x89\xf8\x89\xe9\xf3\xa4\x89\x7b\x0c\x5d\x5f\x5e\x5b\xc3'
+    else
+        write 0xCFF30 '\x53\x56\x57\x55\x8b\x5c\x24\x14\x8b\x74\x24\x18\x89\xf7\x31\xc0\xb9\xff\xff\xff\xff\xf2\xae\xf7\xd1\x89\xcd\x8b\x43\x0c\x8b\x53\x10\x29\xc2\x39\xd5\x76\x2f\xbf\x96\x01\x00\x00\x39\xef\x73\x02\x89\xef\x57\xe8\xd8\xe1\xfb\xff\x83\xc4\x04\x85\xc0\x74\x23\x89\x43\x0c\x01\xc7\x89\x7b\x10\x50\xff\x73\x14\xe8\x30\xb3\xff\xff\x83\xc4\x08\x89\x43\x14\x8b\x7b\x0c\x89\xf8\x89\xe9\xf3\xa4\x89\x7b\x0c\x5d\x5f\x5e\x5b\xc3'
+    fi
     # Add one 512-byte RX section. No new imports or absolute stub addresses.
     # Movie adapter supplies compressed-frame size and DWORD-aligned RGB size.
     # Exit adapter stops/joins decoder workers, deletes app+110h and app+E8h
@@ -94,8 +101,8 @@ if [[ $state == original ]]; then
         write 0x8B2A3 '\xe9\xea\xc1\x15\x00'
     fi
 fi
-if [[ $lang == de ]]; then expected=7ff63f1e09d1eb31855544e61f85f2671f6f505d797ecccef6c6ddd2769cd495
-else expected=b2fd021e94e2d483c0507ca522bb2391f613b69f2a5c1e431453f943384212af; fi
+if [[ $lang == de ]]; then expected=84897e4d47848c40e2498fd2937087f943b181639098203a542d32dc98ee785a
+else expected=9cbdfa863fd1a0991eb3b174c9b298c9481a1aa7fd1c55450612241743c1b412; fi
 actual=$(sha256sum < "$tmp"); actual=${actual%% *}
 [[ $actual == "$expected" ]] || fail 'Patched checksum mismatch.'
 chmod 644 -- "$tmp"

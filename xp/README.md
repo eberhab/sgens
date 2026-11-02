@@ -11,7 +11,7 @@ files. No administrator rights are needed; use a writable game folder.
 | `patch-xp.exe` | Windows patcher; native and full-shim modes. |
 | `patch-xp.sh` | Bash alternative for the native patch. |
 | `sgens.reg` | Editable installation paths for the playing user. |
-| `source/patch-xp.c`, `source/build.py` | Annotated implementation and reproducible build. |
+| `source/patch-xp.c`, `source/pool-fix.s`, `source/build.py` | Annotated implementation and reproducible build. |
 
 Both patched variants also correct the input/output image sizes supplied to the
 Windows movie codec and repair shutdown order. Movie workers stop before their
@@ -20,6 +20,14 @@ services still exist. Closing the main window requests orderly application exit
 instead of destroying that window before cleanup. These repairs live in an EXE
 `.sgfix` code section (199 code bytes, 512 bytes added to each file); the original
 EXE, game data and save format are preserved. No codec installation is required.
+
+Both modes also repair the resource string pool: the original copies a path
+before checking available space, so long installation/DATA paths can overwrite
+heap metadata and crash later on menu Quit. The replacement checks the full
+string length including its NUL before copying, allocates a sufficiently large
+block when needed, and retains the original ownership/freeing rules. This is a
+103-byte in-place EXE repair, separate from `.sgfix`; the shim DLL is unchanged.
+It does not remove other original path-length limits or add Unicode-path support.
 
 The missing Windows movies are a codec-header compatibility issue: the game
 passes a static compressed-size value and a zero RGB565 output size. XP/Windows
@@ -83,7 +91,7 @@ The native patch is not the complete Wine fix. Its VGA replacement is
 is `02 -> 01` at DE `0x87ADF` / EN `0x867CF`. These are file offsets for the two
 originals identified in the patchers, not generic offsets for other editions.
 The annotated C source records the additional decoder, main-window close and
-ExitInstance adapters and the edition-specific offsets. Both Bash and C tools
+ExitInstance adapters, the string-pool repair and the edition-specific offsets. Both Bash and C tools
 verify the complete patched hash, including the appended code section.
 Bash also accepts `--identify INPUT` and can copy its recognized native output;
 the Windows tool requires an untouched original for either mode.
